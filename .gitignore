@@ -1,0 +1,37 @@
+# Binários Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Build
+/bin/
+/build/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependências (não precisa versionar vendor)
+vendor/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# MacOS
+.DS_Store
+
+# Variáveis de ambiente
+.env
+
+# Coverage
+coverage.out
+
+# Arquivos temporários
+*.tmp

@@ -1,0 +1,92 @@
+name: auth-service-ci
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Dockerfile"
+      - ".github/workflows/auth-service-ci.yml"
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Dockerfile"
+      - ".github/workflows/auth-service-ci.yml"
+
+jobs:
+  test:
+    name: Build & Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Download dependencies
+        run: go mod tidy
+
+      - name: Run tests
+        run: go test ./... -coverprofile=coverage.out
+
+      - name: Show coverage
+        run: go tool cover -func=coverage.out
+
+  lint:
+    name: Lint / Static Analysis
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Run gofmt check
+        run: |
+          test -z "$(gofmt -l .)"
+
+      - name: Run go vet
+        run: go vet ./...
+
+  sast:
+    name: SAST - gosec
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  sca:
+    name: SCA - Trivy FS
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy FS Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
