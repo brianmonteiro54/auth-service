@@ -25,7 +25,9 @@ func newTestApp(t *testing.T) (*App, sqlmock.Sqlmock, func()) {
 	}
 
 	cleanup := func() {
-		db.Close()
+		if err := db.Close(); err != nil {
+    t.Errorf("error closing database: %v", err)
+}
 	}
 
 	return app, mock, cleanup
@@ -39,7 +41,11 @@ func TestHealthHandler(t *testing.T) {
 	app.healthHandler(w, req)
 
 	resp := w.Result()
-	defer resp.Body.Close()
+	defer func() {
+    if err := resp.Body.Close(); err != nil {
+        t.Errorf("error closing response body: %v", err)
+    }
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status esperado %d, obtido %d", http.StatusOK, resp.StatusCode)
