@@ -5,11 +5,12 @@ on:
     branches:
       - main
       - develop
+      - feat/teste-ci
   push:
     branches:
       - main
       - develop
-
+      - feat/teste-ci
 permissions:
   contents: read
   packages: write
