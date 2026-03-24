@@ -96,7 +96,7 @@ jobs:
           ignore-unfixed: true
 
   docker-build-push:
-    name: Docker Build & Push
+    name: Docker Build & Push to ECR
     runs-on: ubuntu-latest
     needs: security-scan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -104,6 +104,10 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
+
+      - name: Ler versão
+        id: version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
       - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
