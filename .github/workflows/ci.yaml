@@ -26,24 +26,17 @@ jobs:
   build-test:
     name: Build & Unit Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
-
       - name: Configurar Go
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-
-      # actions/cache REMOVIDO - setup-go@v6 já faz cache automaticamente
-
       - name: Baixar dependências
         run: go mod download
-
       - name: Build
         run: go build ./...
-
       - name: Rodar testes unitários
         run: go test ./... -cover
 
@@ -51,16 +44,13 @@ jobs:
     name: Linter / Static Analysis
     runs-on: ubuntu-latest
     needs: build-test
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
-
       - name: Configurar Go
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-
       - name: Rodar golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
@@ -70,22 +60,18 @@ jobs:
     name: Security Scan (SAST & SCA)
     runs-on: ubuntu-latest
     needs: lint
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
-
       - name: Configurar Go
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
-
       - name: SAST com gosec
         uses: securego/gosec@master
         continue-on-error: true
         with:
           args: ./...
-
       - name: SCA com Trivy (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -100,7 +86,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: security-scan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
@@ -142,3 +127,18 @@ jobs:
       - name: Push da imagem para ECR
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Atualizar imagem no repo de deploy
+        run: |
+          FULL_IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+
+          git clone https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/deploy-auth-service.git deploy-repo
+          cd deploy-repo
+
+          sed -i "s|image: 420414435435.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifests/deployment.yaml
+          git diff --cached --quiet || git commit -m "deploy: auth-service ${GITHUB_SHA::8}"
+          git push origin main
