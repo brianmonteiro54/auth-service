@@ -89,11 +89,7 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
-
-      - name: Ler versão
-        id: version
-        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-
+        
       - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
