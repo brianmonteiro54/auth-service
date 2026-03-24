@@ -135,10 +135,17 @@ jobs:
           git clone https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/deploy-auth-service.git deploy-repo
           cd deploy-repo
 
-          sed -i "s|image: 420414435435.dkr.ecr.us-east-1.amazonaws.com/togglemaster/auth-service:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
+          echo "=== ANTES ==="
+          grep "image:.*auth-service" manifests/deployment.yaml
+
+          sed -i "s|image:.*auth-service:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
+
+          echo "=== DEPOIS ==="
+          grep "image:.*auth-service" manifests/deployment.yaml
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add manifests/deployment.yaml
-          git diff --cached --quiet || git commit -m "deploy: auth-service ${GITHUB_SHA::8}"
+          git diff --cached --quiet && echo "SEM MUDANCAS - sed nao alterou nada" && exit 1
+          git commit -m "deploy: auth-service ${GITHUB_SHA::8}"
           git push origin main
