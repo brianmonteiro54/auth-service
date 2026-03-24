@@ -18,8 +18,7 @@ permissions:
 env:
   GO_VERSION: "1.22"
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: togglemaster/${{ github.event.repository.name }}
-  IMAGE_TAG: ${{ github.sha }}
+  ECR_REPOSITORY: togglemaster/auth-service
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -29,14 +28,12 @@ jobs:
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Configurar Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-
-      # actions/cache REMOVIDO - setup-go@v6 já faz cache automaticamente
 
       - name: Baixar dependências
         run: go mod download
@@ -54,17 +51,17 @@ jobs:
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Configurar Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Rodar golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.11
+          version: v1.60.3
 
   security-scan:
     name: Security Scan (SAST & SCA)
@@ -73,10 +70,10 @@ jobs:
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Configurar Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -96,14 +93,18 @@ jobs:
           ignore-unfixed: true
 
   docker-build-push:
-    name: Docker Build & Push
+    name: Docker Build & Push to ECR
     runs-on: ubuntu-latest
     needs: security-scan
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Ler versão
+        id: version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
       - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -119,22 +120,17 @@ jobs:
 
       - name: Build da imagem Docker
         run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }} .
 
       - name: Scan da imagem com Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}
           format: table
           severity: CRITICAL
           exit-code: 1
           ignore-unfixed: true
 
-      - name: Tag da imagem para ECR
-        run: |
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG \
-            ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
-
       - name: Push da imagem para ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}
