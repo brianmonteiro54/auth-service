@@ -1,6 +1,76 @@
-# auth-service (Go)
-
-Este é o serviço de autenticação do projeto ToggleMaster. Ele é responsável por criar e validar chaves de API.
+# Auth Service
+ 
+Microsserviço de autenticação da plataforma **ToggleMaster**, responsável pela criação e validação de API Keys.
+ 
+## Visão Geral
+ 
+O Auth Service é o gateway de segurança do ToggleMaster. Ele gerencia o ciclo de vida das chaves de API utilizadas pelos demais microsserviços para autenticação via header `Authorization: Bearer <key>`.
+ 
+## Tecnologias
+ 
+| Componente | Tecnologia |
+|---|---|
+| Linguagem | Go 1.22+ |
+| Banco de Dados | PostgreSQL (RDS) |
+| Container | Docker (multi-stage build) |
+| Orquestração | Kubernetes (EKS) |
+| Registry | Amazon ECR |
+| CI/CD | GitHub Actions + ArgoCD (GitOps) |
+ 
+## Endpoints
+ 
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/health` | Health check do serviço |
+| `POST` | `/keys` | Cria uma nova API Key (requer Master Key) |
+| `GET` | `/validate` | Valida uma API Key via header Authorization |
+ 
+## Variáveis de Ambiente
+ 
+| Variável | Descrição |
+|---|---|
+| `PORT` | Porta do serviço (padrão: `8001`) |
+| `DATABASE_URL` | String de conexão PostgreSQL |
+| `MASTER_KEY` | Chave mestra para criação de API Keys |
+ 
+## Pipeline CI/CD (DevSecOps)
+ 
+O workflow do GitHub Actions executa os seguintes estágios:
+ 
+1. **Build & Unit Test** — Compilação e execução dos testes unitários
+2. **Linter** — Análise estática com `golangci-lint`
+3. **Security Scan** — SAST com `gosec` + SCA com `Trivy` (bloqueia vulnerabilidades críticas)
+4. **Docker Build & Push** — Build da imagem, scan com Trivy e push para o ECR
+5. **GitOps Update** — Atualiza a tag da imagem no repositório `deploy-auth-service`
+ 
+## Deploy (GitOps)
+ 
+O deploy segue o modelo GitOps com ArgoCD. Ao final do pipeline de CI, a tag da imagem é atualizada automaticamente no repositório [`deploy-auth-service`](https://github.com/brianmonteiro54/deploy-auth-service), e o ArgoCD sincroniza a mudança no cluster EKS.
+ 
+## Executando Localmente
+ 
+```bash
+# Configurar variáveis
+cp .env.example .env
+ 
+# Rodar
+go mod download
+go run .
+```
+ 
+## Estrutura do Projeto
+ 
+```
+├── .github/workflows/ci.yaml   # Pipeline CI/CD
+├── db/init.sql                  # Script de inicialização do banco
+├── Dockerfile                   # Build multi-stage (Go)
+├── handlers.go                  # Handlers HTTP
+├── handlers_test.go             # Testes unitários
+├── key.go                       # Lógica de hash de API Keys
+├── main.go                      # Entrypoint da aplicação
+├── go.mod / go.sum              # Dependências Go
+└── README.md
+```
 
 ## 📦 Pré-requisitos (Local)
 
