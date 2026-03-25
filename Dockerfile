@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Builder - Compilação da aplicação Go
 # =============================================================================
-FROM golang:1.25-alpine AS builder
+FROM golang:1.21.0-alpine3.17 AS builder
 
 # Instala certificados SSL e ferramentas básicas
 RUN apk add --no-cache ca-certificates git
@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # =============================================================================
 # Stage 2: Final - Imagem de produção mínima
 # =============================================================================
-FROM alpine:3.23
+FROM alpine:3.16
 
 # Instala apenas certificados SSL (necessário para HTTPS)
 RUN apk add --no-cache ca-certificates tzdata wget
