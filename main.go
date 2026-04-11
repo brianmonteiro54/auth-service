@@ -75,8 +75,8 @@ func initOTel(ctx context.Context) (func(), error) {
 	return func() {
 		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		tp.Shutdown(c)
-		mp.Shutdown(c)
+    _ = tp.Shutdown(c)
+    _ = mp.Shutdown(c)
 	}, nil
 }
 
