@@ -125,7 +125,10 @@ jobs:
 
       - name: Push da imagem para ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+          if ! docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG; then
+            echo "::warning::A tag $IMAGE_TAG já existe no ECR. Pulando push para evitar erro de imutabilidade."
+            exit 0
+          fi
 
       - name: Atualizar imagem no repo de deploy
         run: |
