@@ -17,6 +17,7 @@ permissions:
 
 env:
   GO_VERSION: "1.25"
+  TRIVY_VERSION: "v0.70.0"
   AWS_REGION: us-east-1
   ECR_REPOSITORY: togglemaster/${{ github.event.repository.name }}
   IMAGE_TAG: ${{ github.sha }}
@@ -73,8 +74,9 @@ jobs:
         with:
           args: ./...
       - name: SCA com Trivy (filesystem)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
+          version: ${{ env.TRIVY_VERSION }}
           scan-type: fs
           scan-ref: .
           severity: CRITICAL
@@ -109,8 +111,9 @@ jobs:
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
 
       - name: Scan da imagem com Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
+          version: ${{ env.TRIVY_VERSION }}
           image-ref: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           format: table
           severity: CRITICAL
