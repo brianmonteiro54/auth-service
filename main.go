@@ -11,6 +11,8 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/joho/godotenv"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -75,8 +77,8 @@ func initOTel(ctx context.Context) (func(), error) {
 	return func() {
 		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-    _ = tp.Shutdown(c)
-    _ = mp.Shutdown(c)
+		_ = tp.Shutdown(c)
+		_ = mp.Shutdown(c)
 	}, nil
 }
 
@@ -126,7 +128,10 @@ func main() {
 	mux.HandleFunc("/validate", app.validateKeyHandler)
 	mux.Handle("/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)))
 
-	// Wrap com OTel
+	// Expõe /metrics para o Prometheus (ServiceMonitor faz scrape aqui)
+	mux.Handle("/metrics", promhttp.Handler())
+
+	// Wrap com OTel (NÃO envolve /metrics em spans — evita poluição de traces)
 	handler := otelhttp.NewHandler(mux, "auth-service")
 
 	server := &http.Server{
